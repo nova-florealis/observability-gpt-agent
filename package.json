@@ -1,0 +1,26 @@
+{
+  "name": "observability-gpt-agent",
+  "version": "1.0.0",
+  "description": "A simple GPT agent that speaks through the OpenAI API",
+  "main": "dist/main.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node --loader ts-node/esm dist/main.js",
+    "dev": "node --loader ts-node/esm src/main.ts",
+    "test": "node --loader ts-node/esm src/main.ts"
+  },
+  "dependencies": {
+    "@nevermined-io/payments": "file:./payments",
+    "openai": "^4.47.1",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.30",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

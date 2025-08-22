@@ -31,11 +31,19 @@ class ObservabilityGPTAgent {
       environment: process.env.NVM_ENVIRONMENT as EnvironmentName,
     });
 
+    // Create custom properties for Helicone tracking
+    const customProperties = {
+      agentid: this.agentId,
+      sessionid: this.sessionId,
+      planid: process.env.NVM_PLAN_DID || 'did:nv:0000000000000000000000000000000000000000',
+      plan_type: process.env.NVM_PLAN_TYPE || 'credit_based',
+      credit_cost: 10
+    };
+
     this.openai = new OpenAI(this.payments.observability.withHeliconeOpenAI(
       process.env.OPENAI_API_KEY!,
       process.env.HELICONE_API_KEY!,
-      this.agentId,
-      this.sessionId
+      customProperties
     ));
   }
 

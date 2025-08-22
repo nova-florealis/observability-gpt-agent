@@ -6,8 +6,8 @@
   "type": "module",
   "scripts": {
     "build": "tsc",
-    "start": "node --loader ts-node/esm dist/main.js",
-    "dev": "node --loader ts-node/esm src/main.ts",
+    "start": "node --loader ts-node/esm src/nevermined-event-agent.ts",
+    "dev": "node --loader ts-node/esm src/nevermined-event-agent.ts",
     "test": "node --loader ts-node/esm src/main.ts"
   },
   "dependencies": {

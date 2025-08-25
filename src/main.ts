@@ -42,7 +42,6 @@ class ObservabilityGPTAgent {
 
     this.openai = new OpenAI(this.payments.observability.withHeliconeOpenAI(
       process.env.OPENAI_API_KEY!,
-      process.env.HELICONE_API_KEY!,
       customProperties
     ));
   }

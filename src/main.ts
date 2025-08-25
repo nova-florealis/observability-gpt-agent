@@ -1,96 +1,113 @@
-import OpenAI from "openai";
-import crypto from "crypto";
 import { Payments, EnvironmentName } from "@nevermined-io/payments";
 import dotenv from "dotenv";
+import { callGPT, simulateSongGeneration, simulateImageGeneration, simulateVideoGeneration } from "./operations";
 
 dotenv.config();
 
-function generateDeterministicAgentId(): string {
-  return process.env.NVM_AGENT_DID!;
-}
-
-function generateSessionId(): string {
-  return crypto.randomBytes(16).toString("hex");
-}
-
 class ObservabilityGPTAgent {
-  private readonly agentId: string;
-  private readonly sessionId: string;
   private readonly payments: Payments;
-  private readonly openai: OpenAI;
 
   constructor() {
-    this.agentId = generateDeterministicAgentId();
-    this.sessionId = generateSessionId();
-    
-    console.log(`Agent ID: ${this.agentId}`);
-    console.log(`Session ID: ${this.sessionId}`);
-    
     this.payments = Payments.getInstance({
       nvmApiKey: process.env.NVM_API_KEY!,
       environment: process.env.NVM_ENVIRONMENT as EnvironmentName,
     });
-
-    // Create custom properties for Helicone tracking
-    const customProperties = {
-      agentid: this.agentId,
-      sessionid: this.sessionId,
-      planid: process.env.NVM_PLAN_DID || 'did:nv:0000000000000000000000000000000000000000',
-      plan_type: process.env.NVM_PLAN_TYPE || 'credit_based',
-      credit_cost: 10
-    };
-
-    this.openai = new OpenAI(this.payments.observability.withHeliconeOpenAI(
-      process.env.OPENAI_API_KEY!,
-      customProperties
-    ));
+    
+    console.log("ObservabilityGPTAgent initialized");
   }
 
-  async callGPT(prompt: string): Promise<string> {
-    try {
-      console.log(`\nCalling GPT with prompt: "${prompt}"`);
-      
-      const completion = await this.openai.chat.completions.create({
-        model: "gpt-3.5-turbo",
-        messages: [
-          {
-            role: "system",
-            content: "You are a simulacrum of a mind that provides concise and creative responses.",
-          },
-          {
-            role: "user",
-            content: prompt,
-          },
-        ],
-        temperature: 0.7,
-        max_tokens: 500,
-      });
+  async callGPT(prompt: string, credit_cost: number): Promise<string> {
+    return await callGPT(this.payments, prompt, credit_cost);
+  }
 
-      const response = completion.choices[0]?.message?.content || "No response generated";
-      console.log(`GPT Response: "${response}"`);
-      
-      return response;
-    } catch (error) {
-      console.error("Error calling OpenAI API:", error);
-      throw error;
-    }
+  async simulateSongGeneration(prompt: string, credit_cost: number): Promise<any> {
+    return await simulateSongGeneration(this.payments, prompt, credit_cost);
+  }
+
+  async simulateImageGeneration(prompt: string, credit_cost: number): Promise<any> {
+    return await simulateImageGeneration(this.payments, prompt, credit_cost);
+  }
+
+  async simulateVideoGeneration(prompt: string, credit_cost: number): Promise<any> {
+    return await simulateVideoGeneration(this.payments, prompt, credit_cost);
   }
 
   async runTestPrompts() {
-    const testPrompts = [
-      "Write a haiku about artificial intelligence",
-      "Explain quantum computing in one sentence",
-      "What's the meaning of life in 10 words or less?",
+    const textPrompts = [
+      { prompt: "Write a haiku about artificial intelligence", credit_cost: 5 },
+      { prompt: "Explain quantum computing in one sentence", credit_cost: 8 },
+      { prompt: "What's the meaning of life in 10 words or less?", credit_cost: 12 },
+    ];
+
+    const songPrompts = [
+      { prompt: "A melancholy ballad about debugging at 3am", credit_cost: 3 },
+      { prompt: "Jazz fusion for coffee shop philosophers", credit_cost: 7 }
+    ];
+
+    const imagePrompts = [
+      { prompt: "A wizard teaching calculus to manifolds", credit_cost: 2 },
+      { prompt: "Time itself having an existential crisis", credit_cost: 4 }
+    ];
+
+    const videoPrompts = [
+      { prompt: "Gravity deciding to take a day off", credit_cost: 6 },
+      { prompt: "Colors arguing about who's most important", credit_cost: 9 }
     ];
 
     console.log("\n=== Running Test Prompts ===\n");
     
-    for (const prompt of testPrompts) {
+    // Test GPT calls
+    for (const { prompt, credit_cost } of textPrompts) {
       try {
-        await this.callGPT(prompt);
+        await this.callGPT(prompt, credit_cost);
         console.log("---");
       } catch (error) {
         console.error(`Failed to process prompt: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    }
+
+    console.log("\n=== Testing Simulated Song Generation ===\n");
+    
+    // Test simulated song generation
+    for (const { prompt, credit_cost } of songPrompts) {
+      try {
+        const songResult = await this.simulateSongGeneration(prompt, credit_cost);
+        console.log(`Song generated: ${songResult.music.title}`);
+        console.log(`Audio URL: ${songResult.music.audioUrl}`);
+        console.log(`Duration: ${songResult.music.duration}s`);
+        console.log("---");
+      } catch (error) {
+        console.error(`Failed to generate song: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    }
+
+    console.log("\n=== Testing Simulated Image Generation ===\n");
+    
+    // Test simulated image generation
+    for (const { prompt, credit_cost } of imagePrompts) {
+      try {
+        const imageResult = await this.simulateImageGeneration(prompt, credit_cost);
+        console.log(`Image generated: ${imageResult.width}x${imageResult.height}`);
+        console.log(`Image URL: ${imageResult.url}`);
+        console.log(`Pixels: ${imageResult.pixels}`);
+        console.log("---");
+      } catch (error) {
+        console.error(`Failed to generate image: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    }
+
+    console.log("\n=== Testing Simulated Video Generation ===\n");
+    
+    // Test simulated video generation
+    for (const { prompt, credit_cost } of videoPrompts) {
+      try {
+        const videoResult = await this.simulateVideoGeneration(prompt, credit_cost);
+        console.log(`Video generated: ${videoResult.duration}s (${videoResult.aspectRatio})`);
+        console.log(`Video URL: ${videoResult.url}`);
+        console.log(`Mode: ${videoResult.mode}, Version: ${videoResult.version}`);
+        console.log("---");
+      } catch (error) {
+        console.error(`Failed to generate video: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
     }
   }

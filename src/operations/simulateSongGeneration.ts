@@ -4,7 +4,7 @@ import { generateDeterministicAgentId, generateSessionId } from "./utils";
 export async function simulateSongGeneration(
   payments: Payments,
   prompt: string,
-  credit_cost: number
+  credit_amount: number
 ): Promise<any> {
   console.log(`\nSimulating song generation for: "${prompt}"`);
   
@@ -17,7 +17,9 @@ export async function simulateSongGeneration(
     sessionid: sessionId,
     planid: process.env.NVM_PLAN_DID || 'did:nv:0000000000000000000000000000000000000000',
     plan_type: process.env.NVM_PLAN_TYPE || 'credit_based',
-    credit_cost: credit_cost,
+    credit_amount: credit_amount,
+    credit_usd_rate: 0.001,
+    credit_price_usd: 0.001 * credit_amount,
     operation: 'simulated_song_generation'
   };
 

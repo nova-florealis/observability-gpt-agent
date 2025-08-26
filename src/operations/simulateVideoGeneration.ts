@@ -11,7 +11,7 @@ function generateModelName(mode: string, duration: number, version: string): str
 export async function simulateVideoGeneration(
   payments: Payments,
   prompt: string,
-  credit_cost: number,
+  credit_amount: number,
   duration?: number
 ): Promise<any> {
   // If no duration provided, randomly select 5s or 10s
@@ -28,7 +28,9 @@ export async function simulateVideoGeneration(
     sessionid: sessionId,
     planid: process.env.NVM_PLAN_DID || 'did:nv:0000000000000000000000000000000000000000',
     plan_type: process.env.NVM_PLAN_TYPE || 'credit_based',
-    credit_cost: credit_cost,
+    credit_amount: credit_amount,
+    credit_usd_rate: 0.001,
+    credit_price_usd: 0.001 * credit_amount,
     operation: 'simulated_video_generation'
   };
 

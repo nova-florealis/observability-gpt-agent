@@ -16,50 +16,50 @@ class ObservabilityGPTAgent {
     console.log("ObservabilityGPTAgent initialized");
   }
 
-  async callGPT(prompt: string, credit_cost: number): Promise<string> {
-    return await callGPT(this.payments, prompt, credit_cost);
+  async callGPT(prompt: string, credit_amount: number): Promise<string> {
+    return await callGPT(this.payments, prompt, credit_amount);
   }
 
-  async simulateSongGeneration(prompt: string, credit_cost: number): Promise<any> {
-    return await simulateSongGeneration(this.payments, prompt, credit_cost);
+  async simulateSongGeneration(prompt: string, credit_amount: number): Promise<any> {
+    return await simulateSongGeneration(this.payments, prompt, credit_amount);
   }
 
-  async simulateImageGeneration(prompt: string, credit_cost: number): Promise<any> {
-    return await simulateImageGeneration(this.payments, prompt, credit_cost);
+  async simulateImageGeneration(prompt: string, credit_amount: number): Promise<any> {
+    return await simulateImageGeneration(this.payments, prompt, credit_amount);
   }
 
-  async simulateVideoGeneration(prompt: string, credit_cost: number): Promise<any> {
-    return await simulateVideoGeneration(this.payments, prompt, credit_cost);
+  async simulateVideoGeneration(prompt: string, credit_amount: number): Promise<any> {
+    return await simulateVideoGeneration(this.payments, prompt, credit_amount);
   }
 
   async runTestPrompts() {
     const textPrompts = [
-      { prompt: "Write a haiku about artificial intelligence", credit_cost: 5 },
-      { prompt: "Explain quantum computing in one sentence", credit_cost: 8 },
-      { prompt: "What's the meaning of life in 10 words or less?", credit_cost: 12 },
+      { prompt: "Write a haiku about artificial intelligence", credit_amount: 5 },
+      { prompt: "Explain quantum computing in one sentence", credit_amount: 8 },
+      { prompt: "What's the meaning of life in 10 words or less?", credit_amount: 12 },
     ];
 
     const songPrompts = [
-      { prompt: "A melancholy ballad about debugging at 3am", credit_cost: 3 },
-      { prompt: "Jazz fusion for coffee shop philosophers", credit_cost: 7 }
+      { prompt: "A melancholy ballad about debugging at 3am", credit_amount: 3 },
+      { prompt: "Jazz fusion for coffee shop philosophers", credit_amount: 7 }
     ];
 
     const imagePrompts = [
-      { prompt: "A wizard teaching calculus to manifolds", credit_cost: 2 },
-      { prompt: "Time itself having an existential crisis", credit_cost: 4 }
+      { prompt: "A wizard teaching calculus to manifolds", credit_amount: 2 },
+      { prompt: "Time itself having an existential crisis", credit_amount: 4 }
     ];
 
     const videoPrompts = [
-      { prompt: "Gravity deciding to take a day off", credit_cost: 6 },
-      { prompt: "Colors arguing about who's most important", credit_cost: 9 }
+      { prompt: "Gravity deciding to take a day off", credit_amount: 6 },
+      { prompt: "Colors arguing about who's most important", credit_amount: 9 }
     ];
 
     console.log("\n=== Running Test Prompts ===\n");
     
     // Test GPT calls
-    for (const { prompt, credit_cost } of textPrompts) {
+    for (const { prompt, credit_amount } of textPrompts) {
       try {
-        await this.callGPT(prompt, credit_cost);
+        await this.callGPT(prompt, credit_amount);
         console.log("---");
       } catch (error) {
         console.error(`Failed to process prompt: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -69,9 +69,9 @@ class ObservabilityGPTAgent {
     console.log("\n=== Testing Simulated Song Generation ===\n");
     
     // Test simulated song generation
-    for (const { prompt, credit_cost } of songPrompts) {
+    for (const { prompt, credit_amount } of songPrompts) {
       try {
-        const songResult = await this.simulateSongGeneration(prompt, credit_cost);
+        const songResult = await this.simulateSongGeneration(prompt, credit_amount);
         console.log(`Song generated: ${songResult.music.title}`);
         console.log(`Audio URL: ${songResult.music.audioUrl}`);
         console.log(`Duration: ${songResult.music.duration}s`);
@@ -84,9 +84,9 @@ class ObservabilityGPTAgent {
     console.log("\n=== Testing Simulated Image Generation ===\n");
     
     // Test simulated image generation
-    for (const { prompt, credit_cost } of imagePrompts) {
+    for (const { prompt, credit_amount } of imagePrompts) {
       try {
-        const imageResult = await this.simulateImageGeneration(prompt, credit_cost);
+        const imageResult = await this.simulateImageGeneration(prompt, credit_amount);
         console.log(`Image generated: ${imageResult.width}x${imageResult.height}`);
         console.log(`Image URL: ${imageResult.url}`);
         console.log(`Pixels: ${imageResult.pixels}`);
@@ -99,9 +99,9 @@ class ObservabilityGPTAgent {
     console.log("\n=== Testing Simulated Video Generation ===\n");
     
     // Test simulated video generation
-    for (const { prompt, credit_cost } of videoPrompts) {
+    for (const { prompt, credit_amount } of videoPrompts) {
       try {
-        const videoResult = await this.simulateVideoGeneration(prompt, credit_cost);
+        const videoResult = await this.simulateVideoGeneration(prompt, credit_amount);
         console.log(`Video generated: ${videoResult.duration}s (${videoResult.aspectRatio})`);
         console.log(`Video URL: ${videoResult.url}`);
         console.log(`Mode: ${videoResult.mode}, Version: ${videoResult.version}`);

@@ -11,7 +11,8 @@ function calculatePixels(width: number, height: number): number {
 export async function simulateImageGeneration(
   payments: Payments,
   prompt: string,
-  credit_amount: number
+  credit_amount: number,
+  batchId?: string
 ): Promise<any> {
   console.log(`\nSimulating image generation for: "${prompt}"`);
   
@@ -27,7 +28,9 @@ export async function simulateImageGeneration(
     credit_amount: credit_amount,
     credit_usd_rate: 0.001,
     credit_price_usd: 0.001 * credit_amount,
-    operation: 'simulated_image_generation'
+    operation: 'simulated_image_generation',
+    batch_id: batchId || '',
+    is_batch_request: batchId ? 1 : 0
   };
 
   const SIMULATED_IMAGE_URLS = [

@@ -5,7 +5,8 @@ import { generateDeterministicAgentId, generateSessionId } from "./utils";
 export async function callGPT(
   payments: Payments,
   prompt: string,
-  credit_amount: number
+  credit_amount: number,
+  batchId?: string
 ): Promise<string> {
   try {
     console.log(`\nCalling GPT with prompt: "${prompt}"`);
@@ -22,7 +23,9 @@ export async function callGPT(
       credit_amount: credit_amount,
       credit_usd_rate: 0.001,
       credit_price_usd: 0.001 * credit_amount,
-      operation: 'gpt_completion'
+      operation: 'gpt_completion',
+      batch_id: batchId || '',
+      is_batch_request: batchId ? 1 : 0
     };
 
     // Create OpenAI client with observability

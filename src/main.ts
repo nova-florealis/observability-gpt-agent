@@ -1,5 +1,6 @@
 import { Payments, EnvironmentName } from "@nevermined-io/payments";
 import dotenv from "dotenv";
+import crypto from "crypto";
 import { callGPT, simulateSongGeneration, simulateImageGeneration, simulateVideoGeneration } from "./operations";
 
 dotenv.config();
@@ -32,6 +33,17 @@ class ObservabilityGPTAgent {
     return await simulateVideoGeneration(this.payments, prompt, credit_amount);
   }
 
+  async simulateCombinedGeneration(prompt: string, credit_amount: number): Promise<any> {
+    // Generate batch ID for this combined operation
+    const batchId = crypto.randomUUID();
+    
+    const gptResult = await callGPT(this.payments, prompt, credit_amount, batchId);
+    const imageResult = await simulateImageGeneration(this.payments, prompt, credit_amount, batchId);
+    const songResult = await simulateSongGeneration(this.payments, prompt, credit_amount, batchId);
+    const videoResult = await simulateVideoGeneration(this.payments, prompt, credit_amount, batchId);
+    return { gptResult, imageResult, songResult, videoResult };
+  }
+
   async runTestPrompts() {
     const textPrompts = [
       { prompt: "Write a haiku about artificial intelligence", credit_amount: 5 },
@@ -52,6 +64,10 @@ class ObservabilityGPTAgent {
     const videoPrompts = [
       { prompt: "Gravity deciding to take a day off", credit_amount: 6 },
       { prompt: "Colors arguing about who's most important", credit_amount: 9 }
+    ];
+
+    const combinedPrompts = [
+      { prompt: "A music video about ontolgies for a teenager", credit_amount: 3 },
     ];
 
     console.log("\n=== Running Test Prompts ===\n");
@@ -108,6 +124,19 @@ class ObservabilityGPTAgent {
         console.log("---");
       } catch (error) {
         console.error(`Failed to generate video: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    }
+
+    console.log("\n=== Testing Combined Prompts ===\n");
+    
+    // Test combined prompts
+    for (const { prompt, credit_amount } of combinedPrompts) {
+      try {
+        const combinedResult = await this.simulateCombinedGeneration(prompt, credit_amount);
+        console.log(`Combined result: ${JSON.stringify(combinedResult)}`);
+        console.log("---");
+      } catch (error) {
+        console.error(`Failed to generate combined generation: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
     }
   }

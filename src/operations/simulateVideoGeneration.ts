@@ -12,10 +12,10 @@ export async function simulateVideoGeneration(
   payments: Payments,
   prompt: string,
   credit_amount: number,
-  duration?: number
+  batchId?: string
 ): Promise<any> {
-  // If no duration provided, randomly select 5s or 10s
-  const finalDuration = duration ?? (Math.random() > 0.5 ? 5 : 10);
+  // Randomly select 5s or 10s duration
+  const finalDuration = Math.random() > 0.5 ? 5 : 10;
   
   console.log(`\nSimulating video generation for: "${prompt}" (${finalDuration}s)`);
   
@@ -31,7 +31,9 @@ export async function simulateVideoGeneration(
     credit_amount: credit_amount,
     credit_usd_rate: 0.001,
     credit_price_usd: 0.001 * credit_amount,
-    operation: 'simulated_video_generation'
+    operation: 'simulated_video_generation',
+    batch_id: batchId || '',
+    is_batch_request: batchId ? 1 : 0
   };
 
   const SIMULATED_VIDEO_URLS = [

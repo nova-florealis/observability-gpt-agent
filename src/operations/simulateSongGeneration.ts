@@ -4,7 +4,8 @@ import { generateDeterministicAgentId, generateSessionId } from "./utils";
 export async function simulateSongGeneration(
   payments: Payments,
   prompt: string,
-  credit_amount: number
+  credit_amount: number,
+  batchId?: string
 ): Promise<any> {
   console.log(`\nSimulating song generation for: "${prompt}"`);
   
@@ -20,7 +21,9 @@ export async function simulateSongGeneration(
     credit_amount: credit_amount,
     credit_usd_rate: 0.001,
     credit_price_usd: 0.001 * credit_amount,
-    operation: 'simulated_song_generation'
+    operation: 'simulated_song_generation',
+    batch_id: batchId || '',
+    is_batch_request: batchId ? 1 : 0
   };
 
   // Generate simulated song data first to match original pattern

@@ -1,9 +1,10 @@
 import OpenAI from "openai";
-import { Payments } from "@nevermined-io/payments";
+import { Payments, StartAgentRequest } from "@nevermined-io/payments";
 import { generateDeterministicAgentId, generateSessionId } from "./utils";
 
 export async function callGPT(
   payments: Payments,
+  agentRequest: StartAgentRequest,
   prompt: string,
   credit_amount: number,
   batchId?: string
@@ -18,19 +19,20 @@ export async function callGPT(
     const customProperties = {
       agentid: agentId,
       sessionid: sessionId,
-      planid: process.env.NVM_PLAN_DID || 'did:nv:0000000000000000000000000000000000000000',
-      plan_type: process.env.NVM_PLAN_TYPE || 'credit_based',
-      credit_amount: credit_amount,
-      credit_usd_rate: 0.001,
-      credit_price_usd: 0.001 * credit_amount,
-      operation: 'gpt_completion',
-      batch_id: batchId || '',
-      is_batch_request: batchId ? 1 : 0
+      // planid: process.env.NVM_PLAN_DID || 'did:nv:0000000000000000000000000000000000000000',
+      // plan_type: process.env.NVM_PLAN_TYPE || 'credit_based',
+      // credit_amount: credit_amount,
+      // credit_usd_rate: 0.001,
+      // credit_price_usd: 0.001 * credit_amount,
+      // operation: 'gpt_completion',
+      // batch_id: batchId || '',
+      // is_batch_request: batchId ? 1 : 0
     };
 
-    // Create OpenAI client with observability
+    // Create OpenAI client with observability using the newer API
     const openai = new OpenAI(payments.observability.withHeliconeOpenAI(
       process.env.OPENAI_API_KEY!,
+      agentRequest,
       customProperties
     ));
     

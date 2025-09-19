@@ -3,14 +3,26 @@ import { generateDeterministicAgentId, generateSessionId } from "./utils";
 
 export async function simulateSongGeneration(
   payments: Payments,
-  agentRequest: StartAgentRequest,
   prompt: string,
   credit_amount: number,
-  batchId?: string
+  batchId?: string,
+  requestAccessToken?: string
 ): Promise<any> {
   console.log(`\nSimulating song generation for: "${prompt}"`);
-  
-  const agentId = generateDeterministicAgentId();
+
+  // Get agent request
+  const agentId = process.env.NVM_AGENT_DID!;
+  const agentHost = process.env.NVM_AGENT_HOST || 'http://localhost:3000';
+  const agentEndpoint = process.env.NVM_AGENT_ENDPOINT || '/ask';
+  const fullUrl = `${agentHost}${agentEndpoint}`;
+
+  const startAgentRequest: StartAgentRequest = await payments.requests.startProcessingRequest(
+    agentId,
+    `Bearer ${requestAccessToken}`,
+    fullUrl,
+    'POST'
+  );
+
   const sessionId = generateSessionId();
   
   // Create custom properties for song generation operations
@@ -19,12 +31,12 @@ export async function simulateSongGeneration(
     sessionid: sessionId,
     // planid: process.env.NVM_PLAN_DID || 'did:nv:0000000000000000000000000000000000000000',
     // plan_type: process.env.NVM_PLAN_TYPE || 'credit_based',
-    // credit_amount: credit_amount,
-    // credit_usd_rate: 0.001,
-    // credit_price_usd: 0.001 * credit_amount,
-    // operation: 'simulated_song_generation',
-    // batch_id: batchId || '',
-    // is_batch_request: batchId ? 1 : 0
+    credit_amount: String(credit_amount),
+    credit_usd_rate: String(0.001),
+    credit_price_usd: String(0.001 * credit_amount),
+    operation: 'simulated_song_generation',
+    batch_id: batchId || '',
+    is_batch_request: String(batchId ? 1 : 0)
   };
 
   // Generate simulated song data first to match original pattern
@@ -40,7 +52,7 @@ export async function simulateSongGeneration(
     mv 
   };
 
-  return await payments.observability.withHeliconeLogging(
+  const result = await payments.observability.withHeliconeLogging(
     'SunoClient',
     {
       model: `ttapi/suno/${mv}`, // Use template literal like original
@@ -50,7 +62,7 @@ export async function simulateSongGeneration(
         requestData: storedRequestData
       }
     },
-    async () => {      
+    async () => {
       return {
         songResponse: {
           jobId,
@@ -67,6 +79,23 @@ export async function simulateSongGeneration(
     (internalResult) => internalResult.songResponse,
     (internalResult) => payments.observability.calculateSongUsage(internalResult.quota),
     'song',
+    startAgentRequest,
     customProperties
   );
+
+  // Redeem credits after successful operation
+  if (requestAccessToken) {
+    try {
+      const redemptionResult = await payments.requests.redeemCreditsFromRequest(
+        startAgentRequest.agentRequestId,
+        requestAccessToken,
+        BigInt(credit_amount)
+      );
+      console.log(`Credits redeemed: ${credit_amount}`, redemptionResult);
+    } catch (redeemErr) {
+      console.error("Failed to redeem credits:", redeemErr);
+    }
+  }
+
+  return result;
 }

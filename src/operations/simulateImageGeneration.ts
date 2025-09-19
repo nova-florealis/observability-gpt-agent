@@ -10,14 +10,26 @@ function calculatePixels(width: number, height: number): number {
 
 export async function simulateImageGeneration(
   payments: Payments,
-  agentRequest: StartAgentRequest,
   prompt: string,
   credit_amount: number,
-  batchId?: string
+  batchId?: string,
+  requestAccessToken?: string
 ): Promise<any> {
   console.log(`\nSimulating image generation for: "${prompt}"`);
-  
-  const agentId = generateDeterministicAgentId();
+
+  // Get agent request
+  const agentId = process.env.NVM_AGENT_DID!;
+  const agentHost = process.env.NVM_AGENT_HOST || 'http://localhost:3000';
+  const agentEndpoint = process.env.NVM_AGENT_ENDPOINT || '/ask';
+  const fullUrl = `${agentHost}${agentEndpoint}`;
+
+  const startAgentRequest: StartAgentRequest = await payments.requests.startProcessingRequest(
+    agentId,
+    `Bearer ${requestAccessToken}`,
+    fullUrl,
+    'POST'
+  );
+
   const sessionId = generateSessionId();
   
   // Create custom properties for image generation operations
@@ -26,12 +38,12 @@ export async function simulateImageGeneration(
     sessionid: sessionId,
     // planid: process.env.NVM_PLAN_DID || 'did:nv:0000000000000000000000000000000000000000',
     // plan_type: process.env.NVM_PLAN_TYPE || 'credit_based',
-    // credit_amount: credit_amount,
-    // credit_usd_rate: 0.001,
-    // credit_price_usd: 0.001 * credit_amount,
-    // operation: 'simulated_image_generation',
-    // batch_id: batchId || '',
-    // is_batch_request: batchId ? 1 : 0
+    credit_amount: String(credit_amount),
+    credit_usd_rate: String(0.001),
+    credit_price_usd: String(0.001 * credit_amount),
+    operation: 'simulated_image_generation',
+    batch_id: batchId || '',
+    is_batch_request: String(batchId ? 1 : 0)
   };
 
   const SIMULATED_IMAGE_URLS = [
@@ -46,7 +58,7 @@ export async function simulateImageGeneration(
     "https://v3.fal.media/files/koala/9cnEfODPJLdoKLiM2_pND.png"
   ];
 
-  return await payments.observability.withHeliconeLogging(
+  const result = await payments.observability.withHeliconeLogging(
     'ImageGeneratorAgent',
     {
       model: "fal-ai/flux-schnell/text-to-image",
@@ -61,11 +73,11 @@ export async function simulateImageGeneration(
     async () => {
       // Randomly select a simulated image URL
       const url = SIMULATED_IMAGE_URLS[Math.floor(Math.random() * SIMULATED_IMAGE_URLS.length)];
-      
+
       // Calculate pixels for default dimensions (1024x576)
       const pixels = calculatePixels(1024, 576);
       console.log("Generated image pixels:", pixels);
-      
+
       return {
         imageUrl: url,
         pixels: pixels,
@@ -81,6 +93,23 @@ export async function simulateImageGeneration(
     }),
     (internalResult) => payments.observability.calculateImageUsage(internalResult.pixels),
     'img',
+    startAgentRequest,
     customProperties
   );
+
+  // Redeem credits after successful operation
+  if (requestAccessToken) {
+    try {
+      const redemptionResult = await payments.requests.redeemCreditsFromRequest(
+        startAgentRequest.agentRequestId,
+        requestAccessToken,
+        BigInt(credit_amount)
+      );
+      console.log(`Credits redeemed: ${credit_amount}`, redemptionResult);
+    } catch (redeemErr) {
+      console.error("Failed to redeem credits:", redeemErr);
+    }
+  }
+
+  return result;
 }

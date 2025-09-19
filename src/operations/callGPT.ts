@@ -1,18 +1,29 @@
 import OpenAI from "openai";
 import { Payments, StartAgentRequest } from "@nevermined-io/payments";
-import { generateDeterministicAgentId, generateSessionId } from "./utils";
+import { generateSessionId } from "./utils";
 
 export async function callGPT(
   payments: Payments,
-  agentRequest: StartAgentRequest,
   prompt: string,
   credit_amount: number,
-  batchId?: string
+  batchId?: string,
+  requestAccessToken?: string
 ): Promise<string> {
   try {
     console.log(`\nCalling GPT with prompt: "${prompt}"`);
-    
-    const agentId = generateDeterministicAgentId();
+
+    // Get agent request
+    const agentId = process.env.NVM_AGENT_DID!;
+    const agentHost = process.env.NVM_AGENT_HOST || 'http://localhost:3000';
+    const agentEndpoint = process.env.NVM_AGENT_ENDPOINT || '/ask';
+    const fullUrl = `${agentHost}${agentEndpoint}`;
+
+    const startAgentRequest: StartAgentRequest = await payments.requests.startProcessingRequest(
+      agentId,
+      `Bearer ${requestAccessToken}`,
+      fullUrl,
+      'POST'
+    );
     const sessionId = generateSessionId();
     
     // Create custom properties for GPT operations
@@ -21,18 +32,18 @@ export async function callGPT(
       sessionid: sessionId,
       // planid: process.env.NVM_PLAN_DID || 'did:nv:0000000000000000000000000000000000000000',
       // plan_type: process.env.NVM_PLAN_TYPE || 'credit_based',
-      // credit_amount: credit_amount,
-      // credit_usd_rate: 0.001,
-      // credit_price_usd: 0.001 * credit_amount,
-      // operation: 'gpt_completion',
-      // batch_id: batchId || '',
-      // is_batch_request: batchId ? 1 : 0
+      credit_amount: String(credit_amount),
+      credit_usd_rate: String(0.001),
+      credit_price_usd: String(0.001 * credit_amount),
+      operation: 'gpt_completion',
+      batch_id: batchId || '',
+      is_batch_request: String(batchId ? 1 : 0)
     };
 
     // Create OpenAI client with observability using the newer API
     const openai = new OpenAI(payments.observability.withHeliconeOpenAI(
       process.env.OPENAI_API_KEY!,
-      agentRequest,
+      startAgentRequest,
       customProperties
     ));
     
@@ -54,7 +65,21 @@ export async function callGPT(
 
     const response = completion.choices[0]?.message?.content || "No response generated";
     console.log(`GPT Response: "${response}"`);
-    
+
+    // Redeem credits after successful operation
+    if (requestAccessToken) {
+      try {
+        const redemptionResult = await payments.requests.redeemCreditsFromRequest(
+          startAgentRequest.agentRequestId,
+          requestAccessToken,
+          BigInt(credit_amount)
+        );
+        console.log(`Credits redeemed: ${credit_amount}`, redemptionResult);
+      } catch (redeemErr) {
+        console.error("Failed to redeem credits:", redeemErr);
+      }
+    }
+
     return response;
   } catch (error) {
     console.error("Error calling OpenAI API:", error);

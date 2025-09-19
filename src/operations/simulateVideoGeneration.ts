@@ -10,17 +10,29 @@ function generateModelName(mode: string, duration: number, version: string): str
 
 export async function simulateVideoGeneration(
   payments: Payments,
-  agentRequest: StartAgentRequest,
   prompt: string,
   credit_amount: number,
-  batchId?: string
+  batchId?: string,
+  requestAccessToken?: string
 ): Promise<any> {
   // Randomly select 5s or 10s duration
   const finalDuration = Math.random() > 0.5 ? 5 : 10;
   
   console.log(`\nSimulating video generation for: "${prompt}" (${finalDuration}s)`);
-  
-  const agentId = generateDeterministicAgentId();
+
+  // Get agent request
+  const agentId = process.env.NVM_AGENT_DID!;
+  const agentHost = process.env.NVM_AGENT_HOST || 'http://localhost:3000';
+  const agentEndpoint = process.env.NVM_AGENT_ENDPOINT || '/ask';
+  const fullUrl = `${agentHost}${agentEndpoint}`;
+
+  const startAgentRequest: StartAgentRequest = await payments.requests.startProcessingRequest(
+    agentId,
+    `Bearer ${requestAccessToken}`,
+    fullUrl,
+    'POST'
+  );
+
   const sessionId = generateSessionId();
   
   // Create custom properties for video generation operations
@@ -29,12 +41,12 @@ export async function simulateVideoGeneration(
     sessionid: sessionId,
     // planid: process.env.NVM_PLAN_DID || 'did:nv:0000000000000000000000000000000000000000',
     // plan_type: process.env.NVM_PLAN_TYPE || 'credit_based',
-    // credit_amount: credit_amount,
-    // credit_usd_rate: 0.001,
-    // credit_price_usd: 0.001 * credit_amount,
-    // operation: 'simulated_video_generation',
-    // batch_id: batchId || '',
-    // is_batch_request: batchId ? 1 : 0
+    credit_amount: String(credit_amount),
+    credit_usd_rate: String(0.001),
+    credit_price_usd: String(0.001 * credit_amount),
+    operation: 'simulated_video_generation',
+    batch_id: batchId || '',
+    is_batch_request: String(batchId ? 1 : 0)
   };
 
   const SIMULATED_VIDEO_URLS = [
@@ -48,7 +60,7 @@ export async function simulateVideoGeneration(
   const mode = "std";
   const modelName = generateModelName(mode, finalDuration, "1.6");
 
-  return await payments.observability.withHeliconeLogging(
+  const result = await payments.observability.withHeliconeLogging(
     'VideoGeneratorAgent',
     {
       model: modelName,
@@ -60,10 +72,10 @@ export async function simulateVideoGeneration(
         version: "1.6"
       }
     },
-    async () => {      
+    async () => {
       // Randomly select a simulated video URL
       const url = SIMULATED_VIDEO_URLS[Math.floor(Math.random() * SIMULATED_VIDEO_URLS.length)];
-      
+
       return {
         videoUrl: url,
         duration: finalDuration,
@@ -81,6 +93,23 @@ export async function simulateVideoGeneration(
     }),
     (internalResult) => payments.observability.calculateVideoUsage(),
     'video',
+    startAgentRequest,
     customProperties
   );
+
+  // Redeem credits after successful operation
+  if (requestAccessToken) {
+    try {
+      const redemptionResult = await payments.requests.redeemCreditsFromRequest(
+        startAgentRequest.agentRequestId,
+        requestAccessToken,
+        BigInt(credit_amount)
+      );
+      console.log(`Credits redeemed: ${credit_amount}`, redemptionResult);
+    } catch (redeemErr) {
+      console.error("Failed to redeem credits:", redeemErr);
+    }
+  }
+
+  return result;
 }

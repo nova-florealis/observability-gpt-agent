@@ -1,33 +1,26 @@
-import { Payments, EnvironmentName, StartAgentRequest } from "@nevermined-io/payments";
+import { Payments, EnvironmentName } from "@nevermined-io/payments";
 import dotenv from "dotenv";
-import crypto from "crypto";
-import { callGPT, simulateSongGeneration, simulateImageGeneration, simulateVideoGeneration } from "./operations";
 
 dotenv.config();
 
-class ObservabilityGPTAgent {
-  private readonly payments: Payments; // Builder payments for observability
-  private subscriberPayments: Payments; // Subscriber payments for request processing
+export class ObservabilityGPTClient {
+  private subscriberPayments: Payments;
   private accessToken: string | null = null;
+  private baseUrl: string;
 
   constructor() {
-    // Use BUILDER_NVM_API_KEY for the main agent operations (like financial-agent)
-    this.payments = Payments.getInstance({
-      nvmApiKey: process.env.BUILDER_NVM_API_KEY!,
-      environment: process.env.NVM_ENVIRONMENT as EnvironmentName,
-    });
-
-    // Create a separate Payments instance for client operations (getting access tokens)
+    // Create a Payments instance for client operations (getting access tokens)
     this.subscriberPayments = Payments.getInstance({
       nvmApiKey: process.env.SUBSCRIBER_NVM_API_KEY!,
       environment: process.env.NVM_ENVIRONMENT as EnvironmentName,
     });
 
-    console.log("ObservabilityGPTAgent initialized");
+    this.baseUrl = process.env.AGENT_URL || "http://localhost:3000";
+    console.log("ObservabilityGPTClient initialized");
   }
 
-  async initialize() {
-    // Get access token for demo operations using SUBSCRIBER_NVM_API_KEY (like financial-agent client)
+  async initialize(): Promise<string> {
+    // Get access token for demo operations using SUBSCRIBER_NVM_API_KEY
     const planId = process.env.NVM_PLAN_DID!;
     const agentId = process.env.NVM_AGENT_DID!;
 
@@ -35,37 +28,50 @@ class ObservabilityGPTAgent {
     this.accessToken = creds.accessToken;
 
     console.log("Access token obtained for agent operations");
+    return this.accessToken;
+  }
+
+  private async makeRequest(endpoint: string, prompt: string, credit_amount: number): Promise<any> {
+    if (!this.accessToken) {
+      throw new Error("Client not initialized. Call initialize() first.");
+    }
+
+    const response = await fetch(`${this.baseUrl}${endpoint}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${this.accessToken}`,
+      },
+      body: JSON.stringify({ prompt, credit_amount }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => "");
+      throw new Error(`Request failed: ${response.status} ${response.statusText} ${errorText}`);
+    }
+
+    const data = await response.json();
+    return data.result;
   }
 
   async callGPT(prompt: string, credit_amount: number): Promise<string> {
-    return await callGPT(this.payments, prompt, credit_amount, undefined, this.accessToken!);
+    return await this.makeRequest("/gpt", prompt, credit_amount);
   }
 
   async simulateSongGeneration(prompt: string, credit_amount: number): Promise<any> {
-    return await simulateSongGeneration(this.payments, prompt, credit_amount, undefined, this.accessToken!);
+    return await this.makeRequest("/song", prompt, credit_amount);
   }
 
   async simulateImageGeneration(prompt: string, credit_amount: number): Promise<any> {
-    return await simulateImageGeneration(this.payments, prompt, credit_amount, undefined, this.accessToken!);
+    return await this.makeRequest("/image", prompt, credit_amount);
   }
 
   async simulateVideoGeneration(prompt: string, credit_amount: number): Promise<any> {
-    return await simulateVideoGeneration(this.payments, prompt, credit_amount, undefined, this.accessToken!);
+    return await this.makeRequest("/video", prompt, credit_amount);
   }
 
   async simulateCombinedGeneration(prompt: string, credit_amount: number): Promise<any> {
-    // Generate batch ID for this combined operation
-    const batchId = crypto.randomUUID();
-
-    const gptResult = await callGPT(this.payments, prompt, credit_amount, batchId, this.accessToken!);
-
-    const imageResult = await simulateImageGeneration(this.payments, prompt, credit_amount, batchId, this.accessToken!);
-
-    const songResult = await simulateSongGeneration(this.payments, prompt, credit_amount, batchId, this.accessToken!);
-
-    const videoResult = await simulateVideoGeneration(this.payments, prompt, credit_amount, batchId, this.accessToken!);
-    
-    return { gptResult, imageResult, songResult, videoResult };
+    return await this.makeRequest("/combined", prompt, credit_amount);
   }
 
   async runTestPrompts() {
@@ -91,15 +97,16 @@ class ObservabilityGPTAgent {
     ];
 
     const combinedPrompts = [
-      { prompt: "A music video about ontolgies for a teenager", credit_amount: 3 },
+      { prompt: "A music video about ontologies for a teenager", credit_amount: 3 },
     ];
 
     console.log("\n=== Running Test Prompts ===\n");
-    
+
     // Test GPT calls
     for (const { prompt, credit_amount } of textPrompts) {
       try {
-        await this.callGPT(prompt, credit_amount);
+        const result = await this.callGPT(prompt, credit_amount);
+        console.log(`GPT Result: ${result}`);
         console.log("---");
       } catch (error) {
         console.error(`Failed to process prompt: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -107,7 +114,7 @@ class ObservabilityGPTAgent {
     }
 
     console.log("\n=== Testing Simulated Song Generation ===\n");
-    
+
     // Test simulated song generation
     for (const { prompt, credit_amount } of songPrompts) {
       try {
@@ -122,7 +129,7 @@ class ObservabilityGPTAgent {
     }
 
     console.log("\n=== Testing Simulated Image Generation ===\n");
-    
+
     // Test simulated image generation
     for (const { prompt, credit_amount } of imagePrompts) {
       try {
@@ -137,7 +144,7 @@ class ObservabilityGPTAgent {
     }
 
     console.log("\n=== Testing Simulated Video Generation ===\n");
-    
+
     // Test simulated video generation
     for (const { prompt, credit_amount } of videoPrompts) {
       try {
@@ -152,7 +159,7 @@ class ObservabilityGPTAgent {
     }
 
     console.log("\n=== Testing Combined Prompts ===\n");
-    
+
     // Test combined prompts
     for (const { prompt, credit_amount } of combinedPrompts) {
       try {
@@ -168,19 +175,18 @@ class ObservabilityGPTAgent {
 
 async function main() {
   try {
-    if (!process.env.OPENAI_API_KEY) {
-      throw new Error("OPENAI_API_KEY environment variable is required");
-    }
+    const client = new ObservabilityGPTClient();
+    await client.initialize();
+    await client.runTestPrompts();
 
-    const agent = new ObservabilityGPTAgent();
-    await agent.initialize();
-    await agent.runTestPrompts();
-
-    console.log("\n=== Agent completed successfully ===");
+    console.log("\n=== Client completed successfully ===");
   } catch (error) {
     console.error(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     process.exit(1);
   }
 }
 
-main();
+// Only run main if this file is executed directly
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main();
+}
